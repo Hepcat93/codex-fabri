@@ -15,4 +15,4 @@ The materials are organized by topic and continuously updated as I deepen my und
 - [🧪 Foundry Commands](foundry-commands.md)
 - [🖥️ Bash Commands](bash-commands.md)
 - [🤖 AI Prompts](nice-ai-prompts.md)
-- [📌 General Notes and Resources](notes-resources.md)
+- [📌 Notes and Resources](notes-resources.md)
