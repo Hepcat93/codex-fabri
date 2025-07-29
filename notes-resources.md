@@ -1,3 +1,9 @@
+# :receipt: Resources and Notes
+
+This file contains resources I have selected for studying smart contract auditing, Ethereum architecture, improving coding skills, and learning advanced concepts such as ZK and upgradeability. The selection is constantly updated as I learn.
+
+---
+
 ### 🧠 Core Articles
 
 > Recommended reading for understanding the mindset and approaches in auditing
