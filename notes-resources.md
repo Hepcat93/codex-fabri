@@ -31,6 +31,6 @@ This file contains resources I have selected for studying smart contract auditin
 
 ---
 
-### 🌀 How a ZKVM Works
+## 🌀 How a ZKVM Works
 
 * [ZKVM Explanation by RareSkills](https://rareskills.io/post/zkvm)
