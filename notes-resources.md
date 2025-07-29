@@ -4,7 +4,7 @@ This file contains resources I have selected for studying smart contract auditin
 
 ---
 
-### 🧠 Core Articles
+## 🧠 Core Articles
 
 > Recommended reading for understanding the mindset and approaches in auditing
 
@@ -13,19 +13,19 @@ This file contains resources I have selected for studying smart contract auditin
 
 ---
 
-### 🧪 Code Practice
+## 🧪 Code Practice
 
 * [Codewars](https://www.codewars.com/) — Algorithm and coding practice
 
 ---
 
-### 🔗 Ethereum Proof-of-Stake
+## 🔗 Ethereum Proof-of-Stake
 
 * [Ethereum Proof-of-Stake by 0xfoobar](https://0xfoobar.substack.com/p/ethereum-proof-of-stake)
 
 ---
 
-### 🛠️ Smart Contract Upgradeability
+## 🛠️ Smart Contract Upgradeability
 
 * [Smart Contract Upgradeability by 0xfoobar](https://0xfoobar.substack.com/p/smart-contract-upgradeability)
 
