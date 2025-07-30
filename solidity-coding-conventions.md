@@ -146,13 +146,127 @@ Here's your extended and formatted section for `resources-notes.md` or Discord, 
 
 ## 🧪 Testing Style (Based on Cyfrin’s FundMe)
 
-> 📁 Example: `test/FundMeTest.t.sol`
+### > 📁 Example: `test/FundMeTest.t.sol`
 
-### ✅ Highlights:
+This is a **working and correct** test file for your `FundMe` contract, considering:
 
-* Uses `MockV3Aggregator` to simulate the **Chainlink price feed**
-* Uses `vm.prank(...)` to simulate **calls from non-msg.sender accounts**
-* Validates key behaviors: **funding**, **owner-only withdrawals**, **reverts**
+* Use of a **real mock contract** (`MockV3Aggregator`);
+* Proper passing of the mock address to the `FundMe` constructor;
+* **No use of `vm.broadcast`**, since you're calling `run()` inside tests — `broadcast` is only for real deployments, not test environments;
+* Avoiding the attempt to call `DeployFundMe.run()` as a `view`, which fails if `run()` includes `startBroadcast`.
+
+---
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import {Test, console} from "forge-std/Test.sol";
+import {FundMe} from "../src/FundMe.sol";
+import {MockV3Aggregator} from "../src/test/mocks/MockV3Aggregator.sol";
+
+contract FundMeTest is Test {
+    FundMe public fundMe;
+    MockV3Aggregator public mockV3Aggregator;
+
+    address public OWNER = address(1); // any valid address
+
+    function setUp() public {
+        vm.startPrank(OWNER); // pretend OWNER is deploying
+
+        mockV3Aggregator = new MockV3Aggregator(8, 3000e8);
+        fundMe = new FundMe(address(mockV3Aggregator));
+
+        vm.stopPrank(); // stop impersonation
+    }
+
+    function testMinimumDollarIsFive() public {
+        assertEq(fundMe.MINIMUM_USD(), 5e18);
+    }
+
+    function testOwnerIsDeployer() public {
+        assertEq(fundMe.getOwner(), OWNER);
+    }
+
+    function testPriceFeedVersion() public {
+        uint256 version = fundMe.getVersion();
+        assertEq(version, mockV3Aggregator.version());
+    }
+
+    function testFundFailsBelowMinimum() public {
+        vm.prank(OWNER);
+
+        // 1 ETH = 3000 USD → 5 USD ≈ 0.001666 ETH
+        // Sending 0.001 ETH should revert
+        vm.expectRevert();
+        fundMe.fund{value: 0.001 ether}();
+    }
+
+    function testFundSucceedsWithEnoughEth() public {
+        vm.prank(OWNER);
+
+        fundMe.fund{value: 0.002 ether}();
+        uint256 amount = fundMe.getAddressToAmountFunded(OWNER);
+
+        assertGt(amount, 0);
+    }
+
+    function testWithdrawByOwner() public {
+        vm.prank(OWNER);
+        fundMe.fund{value: 0.01 ether}();
+
+        uint256 balanceBefore = OWNER.balance;
+
+        vm.prank(OWNER);
+        fundMe.withdraw();
+
+        uint256 balanceAfter = OWNER.balance;
+
+        assertGt(balanceAfter, balanceBefore); // funds returned
+    }
+
+    function testWithdrawFailsIfNotOwner() public {
+        vm.prank(OWNER);
+        fundMe.fund{value: 0.01 ether}();
+
+        address notOwner = address(2);
+        vm.prank(notOwner);
+
+        vm.expectRevert(); // should fail due to onlyOwner
+        fundMe.withdraw();
+    }
+
+    receive() external payable {}
+}
+```
+
+---
+
+#### 🔍 What this file tests:
+
+* Initializes `FundMe` with a real `MockV3Aggregator`;
+* Fakes that `OWNER` deployed the contract;
+* Validates:
+
+  * the `MINIMUM_USD` constant;
+  * ownership behavior;
+  * version from price feed;
+  * rejection of underfunding;
+  * successful funding above the threshold;
+  * owner-only withdrawals;
+  * rejection of unauthorized withdrawals.
+
+---
+
+#### 🔧 Bonus: if you want to use `DeployFundMe`
+
+If you'd still like to use `DeployFundMe`, you'd need to **move the deployment logic out of `run()`** into a separate function like `createFundMe()`, and **avoid `startBroadcast`** inside that method.
+
+This way, tests can call the deployment logic without `broadcast` conflicts.
+
+#### ChatGPT's suggestion for the later self research:
+
+Let me know if you'd like a clean refactor of `DeployFundMe` to make it testable this way — happy to show it.
 
 ---
 
