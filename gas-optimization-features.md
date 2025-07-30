@@ -144,6 +144,8 @@ The key difference lies in **how the array `s_funders` is accessed**:
 
 ---
 
+
+
 ## ✅ Over time I plan to expand this document with:
 
 * `unchecked` arithmetic tricks
