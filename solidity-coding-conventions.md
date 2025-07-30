@@ -308,7 +308,7 @@ It’s an interactive environment where you:
 
 ---
 
-## :tools: **What is Chisel (for Solidity)?**
+## 🛠 **What is Chisel (for Solidity)?**
 
 **Chisel** is a REPL for **Solidity** — like a **Solidity playground in your terminal**.
 
@@ -326,7 +326,7 @@ It’s an interactive environment where you:
 
 ---
 
-### :test_tube: Example usage
+### ✍️ Example usage
 
 ```bash
 chisel
@@ -396,13 +396,157 @@ forge test --anvil --fork-url http://... --anvil-args "--seed 123"
 
 ---
 
-## 🔗 Contract Address Passing Options
+## 🔗 Automatic Contract Address Passing Options
 
-| Method                       | On-Chain? | Notes                                           |
-| ---------------------------- | --------- | ----------------------------------------------- |
-| Constructor argument passing | ✅ Yes     | Use when deploying contracts in a single script |
-| `.env` or shell              | ❌ No      | Flexible across deploy stages                   |
-| JSON save/load               | ❌ No      | Good for multi-stage testing/deployment         |
+### :question: **Question**
+
+> “Is importing the only way to automatically reference another contract’s address after deployment in a script?”
+
+**Answer:**
+Not at all — there are **multiple automated approaches** to pass or retrieve a deployed contract’s address, and **importing is not required**.
+
+---
+
+### :white_check_mark: **Three Main Approaches**
+
+| # | Method                                     | On-Chain Compatible? | Off-Chain Involved? | Use Case                                                       |
+| - | ------------------------------------------ | -------------------- | ------------------- | -------------------------------------------------------------- |
+| 1 | **Direct assignment in the deploy script** | ✅ Yes                | ❌ No                | Single deploy script where contracts are deployed sequentially |
+| 2 | **Environment variables (.env, shell)**    | ❌ No                 | ✅ Yes               | Reusable CLI deploys or CI pipelines                           |
+| 3 | **JSON serialization/deserialization**     | ❌ No                 | ✅ Yes               | Multi-step deployments or test setups                          |
+
+---
+
+### :mag_right: **Detailed Breakdown**
+
+---
+
+#### :white_check_mark: 1. Direct assignment within the deploy script (on-chain)
+
+You deploy one contract and immediately use its address in the next deployment:
+
+```solidity
+function run() external {
+    vm.startBroadcast();
+
+    MockV3Aggregator mock = new MockV3Aggregator(...);
+    FundMe fund = new FundMe(address(mock));
+
+    vm.stopBroadcast();
+}
+```
+
+:green_circle: **Pros**:
+
+* Fully on-chain and atomic
+* Clean, self-contained
+
+:red_circle: **Cons**:
+
+* Not modular — only works if both contracts are deployed in the same script/run
+
+---
+
+#### :white_check_mark: 2. Passing address via shell or `.env` variables (off-chain)
+
+You pass the address manually (or via a shell script):
+
+```bash
+export PRICE_FEED=0xMockAddress
+forge script script/DeployFundMe.s.sol:DeployFundMe \
+  --rpc-url $RPC_URL \
+  --private-key $PRIVATE_KEY \
+  --broadcast \
+  --constructor-args $PRICE_FEED
+```
+
+You can also load from `.env` using `vm.envAddress(...)` in Solidity:
+
+```solidity
+address priceFeed = vm.envAddress("PRICE_FEED");
+FundMe fund = new FundMe(priceFeed);
+```
+
+:green_circle: **Pros**:
+
+* Good for separating deployments across stages or chains
+* Integrates well with CI/CD pipelines
+
+:red_circle: **Cons**:
+
+* Not on-chain — depends on external files or user input
+* Risk of mismatches if `.env` is outdated or missing
+
+---
+
+#### :white_check_mark: 3. Serialize & deserialize address using JSON (off-chain)
+
+You write the deployed address into a `.json` file, and read it later:
+
+**Save (serialize) during deployment:**
+
+```solidity
+string memory json = vm.serializeAddress("deploy", "priceFeed", address(mock));
+vm.writeJson(json, "./deployments/mock.json");
+```
+
+**Load (deserialize) in another script:**
+
+```solidity
+address priceFeed = vm.parseJsonAddress("./deployments/mock.json", ".deploy.priceFeed");
+FundMe fund = new FundMe(priceFeed);
+```
+
+:green_circle: **Pros**:
+
+* Great for multi-script, multi-chain deployments
+* Enables reuse of previously deployed contract data
+
+:red_circle: **Cons**:
+
+* Depends on off-chain cheatcodes (`vm.*`)
+* Only works inside Foundry scripts, not in production contracts
+
+---
+
+### :pushpin: **Serialization: What Is It?**
+
+**Serialization** is the process of converting a data object (like a contract address) into a storable format (e.g. JSON).
+**Deserialization** is the reverse — reading the data back into code.
+
+Useful when:
+
+* You need to store results of one deployment to use later
+* Avoid hardcoding
+* Maintain flexibility across different networks
+
+---
+
+### :white_check_mark: **Which Works On-Chain?**
+
+| Method                     | Works Fully On-Chain? |
+| -------------------------- | --------------------- |
+| Environment variables      | ❌ No                  |
+| JSON serialization         | ❌ No                  |
+| Direct constructor passing | ✅ Yes                 |
+
+Only **method #3** (direct address passing in Solidity) is **fully on-chain**, meaning it:
+
+* Doesn’t depend on external files
+* Can run inside a contract, not just in a script
+
+---
+
+### :brain: Best Practices
+
+* Use **direct variable passing** when everything is in one deploy script or transaction.
+* Use **`.env` or JSON serialization** when:
+
+  * Deployments are split across steps or teams
+  * You want modularity and reuse
+  * You're integrating with CI/CD
+
+:white_check_mark: All three methods can be **combined** in large projects.
 
 ---
 
