@@ -666,23 +666,47 @@ Only **method #3** (direct address passing in Solidity) is **fully on-chain**, m
 
 ## 🧱 Abstract Contracts
 
-Abstract contracts can:
+Just like interfaces, abstract contracts can declare functions without bodies — but **unlike** interfaces, they can also include fully implemented functions and storage variables.
 
-* Contain unimplemented functions (like interfaces)
-* Also contain logic and state
-* Be used as inheritance templates
+They **aren’t instantiated directly** like regular contracts and **aren’t used as standalone instances** like interfaces either. Instead, they are **inherited** by other contracts.
 
-```solidity
-abstract contract MyAbstract {
-    function doSomething() public virtual;
-}
-```
+Abstract contracts function as templates, but **they don’t have to appear first in the inheritance chain**. They can serve as intermediate layers and don’t have to fully implement the parent contract’s code — only the parts that need to be overridden or extended.
 
 ---
 
-## ⚙️ `virtual` & `override`
+### Unexpected (for me) use case:
 
-Used for inheritance control:
+When I imported `MockV3Aggregator.sol` from the `chainlink-brownie-contracts` library and created my own mock aggregator contract that inherits from it — without initializing the constructor arguments — the compiler gave me two options:
+
+* Either rewrite the constructor and supply the required arguments like in the parent contract;
+* Or **mark my new contract as `abstract`**, effectively skipping the need to define the constructor.
+
+Here’s the Solidity code:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol";
+
+abstract contract MyMockV3Aggregator is MockV3Aggregator {
+    function version() public pure override returns (uint256) {
+        return 1;
+    }
+}
+```
+
+> :wrench: This won’t compile as-is — the `version()` function tries to override a `public constant uint256` variable, which has an automatically generated getter. You **can’t override it with a function**.
+
+Still, this example serves to illustrate how marking a contract `abstract` allows you to bypass the need to supply constructor arguments immediately — useful for structuring or extending contracts during development or testing.
+
+---
+
+## ⚙️ Overrridable Functions From Parent Contracts
+
+### The word `virtual` in a function's signature means it can be overridden by the faunction with the same name in a child contract. To do this, mark it as `override`.
+
+**Below are examples of inheritance control:**
 
 ```solidity
 contract A {
@@ -706,40 +730,133 @@ contract C is A, B {
 
 ## ⚙️ Assembly & Yul Basics
 
-### 🧬 Yul: A Low-Level Language
+### low-level EVM (Ethereum Virtual Machine) assembly code
 
-| Opcode         | Description                      |
-| -------------- | -------------------------------- |
-| `sstore(k, v)` | Store `v` in slot `k`            |
-| `sload(k)`     | Load value from slot `k`         |
-| `mstore(o, v)` | Store `v` in memory offset `o`   |
-| `return(o, s)` | Return `s` bytes from offset `o` |
+The `assembly { ... }` block in Solidity allows you to write **low-level EVM (Ethereum Virtual Machine) assembly code** directly inside your smart contract. It gives you **fine-grained control** over how things are stored and executed, bypassing high-level Solidity syntax.
 
-### ✍️ Example
+Let’s break down what’s happening in your example:
+
+---
+
+#### :wrench: `assemblyStore`
 
 ```solidity
-function store(uint x) external {
+function assemblyStore(uint256 newNumber) external {
     assembly {
-        sstore(0x00, x)
-    }
-}
-
-function load() external view returns (uint x) {
-    assembly {
-        x := sload(0x00)
+        sstore(0x00, newNumber)
     }
 }
 ```
 
-> ⚠️ Use `assembly` and `Yul` only when necessary — prone to bugs and harder to audit.
+This uses **Yul assembly** to directly store the value `newNumber` into **storage slot `0x00`**.
+
+* `sstore(key, value)` → stores `value` at `key` in **contract storage**
+* `0x00` → this is storage slot `0`, which is where `myNumberOne` is stored by default in Solidity
+
+:bulb: This line is equivalent to:
+
+```solidity
+myNumberOne = newNumber;
+```
+
+but done manually via assembly.
 
 ---
 
-If you're building your portfolio, you can add sections for:
+This function returns a value using assembly:
 
-* ✅ Security patterns (e.g. reentrancy guard, access control)
-* 📚 Reading notes from audits
-* 🔍 Gas optimization tricks
-* 🧪 Fuzzing, invariant testing, etc.
+```solidity
+function assemblyView() external view returns (uint256 result) {
+    assembly {
+        result := sload(0x00)
+    }
+}
+```
 
-Would you like a sample README or repo structure suggestion too?
+Or if you want to use `return()` manually:
+
+```solidity
+function assemblyView() external view returns (uint256) {
+    assembly {
+        let value := sload(0x00)
+        mstore(0x00, value)
+        return(0x00, 0x20)
+    }
+}
+```
+
+---
+
+#### :warning: Summary:
+
+* `assembly {}` lets you write EVM instructions directly (Yul language).
+* `sstore` and `sload` manipulate storage manually.
+* `mstore` and `return` are for working with memory and returning raw values.
+* Use with care: errors are easier to make and harder to debug than in normal Solidity.
+
+---
+
+### :test_tube: What is Yul?
+
+Yul is a **low-level intermediate language** used by the Solidity compiler for optimization.
+
+* Introduced after Solidity 0.6.x as a **cleaner alternative to legacy inline assembly**
+* Used inside `assembly {}` blocks
+* Shared across multiple EVM targets (EVM, eWASM)
+
+#### Common Yul Opcodes
+
+| Opcode                  | Purpose               |
+| ----------------------- | --------------------- |
+| `sstore(slot, value)`   | Write to storage      |
+| `sload(slot)`           | Read from storage     |
+| `mstore(offset, value)` | Write to memory       |
+| `mload(offset)`         | Read from memory      |
+| `return(offset, size)`  | Return memory segment |
+
+#### Yul Syntax Example:
+
+```solidity
+function getVal() public view returns (uint256 result) {
+    assembly {
+        result := sload(0x0)
+    }
+}
+```
+
+* `:=` is assignment
+* All operations are done in slots or memory offsets
+
+---
+
+#### :vs: Yul vs Old Assembly
+
+Before Yul:
+
+```solidity
+assembly {
+    let x := calldataload(4)
+}
+```
+
+Now with Yul:
+
+* Syntax is more structured
+* Control flow and variable handling are cleaner
+* Easier for the compiler to optimize
+
+---
+
+#### :warning: When to Use Yul?
+
+Use Yul if you need:
+
+* **Gas savings**
+* Access to **EVM internals**
+* **Low-level memory tricks**
+
+But be careful:
+
+* **Harder to test & audit**
+* Easier to introduce **bugs**, **invariant violations**, or **reentrancy**
+* Avoid unless necessary — or you're building critical low-level primitives
