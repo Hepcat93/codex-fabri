@@ -123,7 +123,9 @@ A function selector is the first **4 bytes** of the Keccak-256 hash of the funct
 
 The selector is derived from the function signature, which is:
 
-"functionName(argumentType1,argumentType2,...)"
+```solidity
+functionName(argumentType1,argumentType2,...)
+```
 
 For example:
 
