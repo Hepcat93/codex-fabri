@@ -1528,5 +1528,5 @@ contract TokenReader {
 - Public/External functions can't take in the contract's storage variables as arguments.
 - However they can mutate them if these mutations are hardcoded into a function's body, cuz it's the developer's deliberate action! Even if Dangerous!
 - In such case the element to mutate was pre-determined, in case with passing storage variable as a functio argument - some arbitrary array in the storage can be changed unpredictebly!
-- Simple types of variables are fully copied by default when passed to a function, cuz it's assumed cheap. We're allowed to explicitly say we need to access the storage variable though, in such a case it will be reference type of variable from the storage.
-- Complex types are reference by default, however we can explicitly say we need a 'memory' copy for the function.
+- Simple variable types (e.g., `uint`, `bool`, `address`) are fully copied by default when passed to functions, as copying them is cheap. However, we can explicitly specify that we want to access the original storage variable using a `storage` reference (in internal functions).
+- Complex types (e.g., arrays, structs, mappings) are treated as reference types. When passed to functions, we must explicitly specify the data location—`memory` (a copy) or `storage` (a reference to the original data).
