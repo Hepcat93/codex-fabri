@@ -1620,6 +1620,9 @@ You're **not copying** `original` — you're creating a **new storage reference*
 * ✅ It’s a **reference (alias)** to `original`.
 * ✅ Any change to `ref` affects `original`.
 
+📌 Reference → same hash → same slot.
+📦 Copy → new hash → new slot.
+
 ### Contrast with this:
 
 ```solidity
@@ -1642,5 +1645,7 @@ uint[] storage ref = original;
 means: *“Make a reference to an existing storage array.”*
 
 This is different from assigning one storage array to another storage array variable directly (which triggers a full copy).
+
+---
 
 
