@@ -10,7 +10,7 @@ The materials are organized by topic and continuously updated as I deepen my und
 
 - [🛡️ Common Vulnerabilities](typical-security-vulnerabilities.md)
 - [📜 License Types and Comparison](license-guide.md)
-- [🧱 Solidity Coding Conventions](solidity-coding-conventions.md)
+- [🧱 Solidity Architecture and Coding Conventions](solidity-achitecture-and-coding-conventions.md)
 - [⛽ Gas Optimization Techniques](gas-optimization-features.md)
 - [🧪 Foundry Commands](foundry-commands.md)
 - [🖥️ Bash Commands](bash-commands.md)
