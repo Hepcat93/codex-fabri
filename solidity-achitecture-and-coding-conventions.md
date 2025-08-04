@@ -1071,19 +1071,22 @@ If Solidity had a global pointer table, it would be more like Python or JavaScri
 
 ### Python (and similar):
 
+```markdown
 words = ["apple", "banana", "apple"]
 
 Memory:
+
 words → [ref, ref, ref]
          ↓    ↓    ↓
      "apple" "banana"
          ↑
    (shared reference)
-
+```
 ---
 
 ### Solidity:
 
+```markdown
 string[] words = ["apple", "banana", "apple"]
 
 Storage:
@@ -1093,6 +1096,7 @@ Storage:
 | Slot 2 | "banana"     |
 | Slot 3 | "apple"      | ← another full copy
 +--------+--------------+
+```
 
 ---
 
