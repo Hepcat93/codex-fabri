@@ -1,4 +1,4 @@
-# Solidity Coding Conventions & Study Notes
+# Solidity Architecture, Coding Conventions & Study Notes
 
 This document collects structured, practical knowledge for smart contract auditing and development. It’s maintained as a study reference alongside the Discord server for fellow learners.
 
@@ -860,3 +860,673 @@ But be careful:
 * **Harder to test & audit**
 * Easier to introduce **bugs**, **invariant violations**, or **reentrancy**
 * Avoid unless necessary — or you're building critical low-level primitives
+
+---
+
+## 🧠 Solidity `memory` vs `storage` — Deep Dive Summary
+
+*Originally sparked by a message shared on my smart contract auditing Discord server ‹𝔽𝕠𝕦𝕟𝕕𝕣𝕪 & 𝔽𝕦𝕣𝕪› 🛡⚔🔥*
+
+### 📌 Core Understanding
+
+In Solidity, when a user (EOA or another contract) interacts with a public function and passes in variables, **those variables are copied into memory**, not passed by reference — for **safety and integrity**.
+
+#### Key Principle:
+
+> **External callers must not be allowed to directly access or mutate contract's internal state (i.e., storage variables).**
+
+---
+
+### 🧱 Data Location Keywords
+
+| Keyword    | Description                                                                |
+| ---------- | -------------------------------------------------------------------------- |
+| `memory`   | Temporary, modifiable, and erased after function call. Used for isolation. |
+| `storage`  | Permanent, persistent on-chain data. Default for state variables.          |
+| `calldata` | Immutable, cheaper than memory. Used for external function inputs.         |
+
+---
+
+### 🧮 Simple vs Reference (Pointer) Types
+
+* **Simple data types** (e.g., `uint`, `bool`, `address`):
+
+  * Are **copied** when passed to functions.
+  * No special keywords needed (`memory` is implied).
+  * Fully safe: changes don’t affect the original variable.
+
+* **Reference types** (e.g., `arrays`, `strings`, `structs`, `mappings`):
+
+  * Require **explicit data location** in function parameters.
+  * Can be expensive to copy → by default, `storage` references are passed within internal functions, but must be handled cautiously.
+
+---
+
+### 🧬 Arrays, Strings, Mappings
+
+#### Arrays & Strings
+
+* Stored as **reference types**.
+* If you pass an array to a `public` function, **you must copy it into `memory`**.
+* This copy is **isolated**: changes won’t affect the original.
+* In contrast, if you use an internal function and explicitly use `storage`, the original will be mutated.
+
+#### Mappings
+
+* Mappings cannot be passed as `memory` or `calldata`. Solidity **only supports `storage`** for mappings.
+* But they are **modifiable** via external functions *indirectly*:
+
+  * You pass a key to the mapping through a function.
+  * The function uses that key to access and update the original `storage` mapping.
+
+---
+
+### 🔐 ABI Limitations
+
+* You **cannot** pass a `storage` variable (like a contract's array or mapping) directly to a public/external function — **this would break encapsulation**.
+* The ABI (Application Binary Interface) **doesn’t support referencing contract-internal structures** from the outside.
+
+That’s why you can:
+
+* Pass a number (a key) to access a `mapping`.
+* Not pass an array and expect to mutate it — instead, operate internally or via index-based setters.
+
+---
+
+### 🔁 Shared References: Power & Danger
+
+#### Why They're Useful:
+
+* Efficient memory usage.
+* Enable modifying the same object in multiple places.
+
+#### Why They're Dangerous:
+
+* Unexpected side effects (you modify it in one place, it changes elsewhere).
+* Especially risky with **mutable** data types (like arrays/dicts).
+* In Solidity, can cause **security risks** (e.g., if internal state is exposed or manipulated carelessly).
+
+---
+
+### 🧹 GC & Immutability (From Python Parallels)
+
+* **GC = Garbage Collector** – automatically frees memory not referenced anymore.
+* Immutable types like Python strings (`"apple"`) are safe to share.
+* But **mutable** types like `list` or Solidity `storage` variables must be handled cautiously.
+
+Changing `"apple"` to `"banana"` just changes a reference — doesn’t modify the original object. Shared references only matter for **mutable** data.
+
+---
+
+### 📎 TL;DR
+
+* Solidity enforces **data safety** between contract and caller by copying inputs to `memory`.
+* Arrays, strings, and mappings behave like **pointers** and can lead to shared state if not handled right.
+* **Only internal functions** can work directly with `storage` pointers.
+* Shared references are powerful but must be **explicitly managed** to avoid bugs or vulnerabilities.
+
+---
+
+## 🪙 Solidity’s Philosophy: Flat, Deterministic, Transparent
+
+### ✅ 1. **Storage layout in Solidity is deterministic and local**
+
+In Solidity:
+
+* All storage variables live at a specific slot in the contract’s storage (not some central registry).
+* Structs and arrays are **encoded into sequential slots** (offset-based).
+* You can predict and compute where any element is stored.
+
+📌 There’s **no indirection layer** (like a global pointer map) because:
+
+* That would require more storage lookups,
+* More complex reads/writes,
+* And potentially more gas.
+
+> Solidity prioritizes **explicit storage layout** over abstract pointer management.
+
+---
+
+### ✅ 2. **It avoids hidden shared state**
+
+If arrays or structs automatically pointed to some global object, **unexpected shared references** would become common:
+
+* You’d copy an array,
+* Change it,
+* And accidentally change the original.
+
+This is dangerous in a smart contract where **immutability and transparency** are key.
+
+So Solidity instead:
+
+* Forces **explicit behavior** (copy or reference),
+* With no hidden references unless you ask for it (by using `storage`).
+
+---
+
+### ✅ 3. **Gas cost and simplicity**
+
+Managing a global reference map (as in Python’s object model or Java’s heap) would:
+
+* Require an internal GC (garbage collection),
+* Add runtime complexity,
+* And be *massively gas-inefficient*.
+
+Solidity’s storage model is flat and manual by design.
+
+---
+
+### 🧠 Mental Model
+
+Think of Solidity like this:
+
+* Every variable lives **either in storage or memory** (or calldata).
+* Reference types like arrays point to **a region of memory or storage**, not some abstract ID.
+* If you copy them, you're either:
+
+  * Making a **new memory copy** (independent), or
+  * Creating a **new reference to existing storage** (shared).
+
+There’s no in-between.
+
+---
+
+### 🔧 Example
+
+```solidity
+contract Example {
+    uint[] public numbers;
+
+    function setNumbers() public {
+        numbers = [1, 2, 3];
+    }
+
+    function modify() public {
+        uint[] storage ref = numbers; // Shared reference
+        ref[0] = 999; // changes `numbers[0]` directly
+    }
+
+    function modifyCopy() public {
+        uint[] memory copy = numbers; // New memory copy
+        copy[0] = 888; // `numbers[0]` remains 999
+    }
+}
+```
+
+No global table, no IDs — just **you saying**: “I want to work with storage” or “give me a copy.”
+
+---
+
+### 🔒 Why that’s a good thing in smart contracts?
+
+* Prevents **accidental shared state bugs**
+* Gives developers **tight control** over costs and behavior
+* Makes behavior **predictable and auditable**
+
+---
+
+If Solidity had a global pointer table, it would be more like Python or JavaScript — but that would be **dangerous, expensive, and unpredictable** in the context of Ethereum.
+
+---
+
+### Python (and similar):
+
+words = ["apple", "banana", "apple"]
+
+Memory:
+words → [ref, ref, ref]
+         ↓    ↓    ↓
+     "apple" "banana"
+         ↑
+   (shared reference)
+
+---
+
+### Solidity:
+
+string[] words = ["apple", "banana", "apple"]
+
+Storage:
++--------+--------------+
+| Slot 0 | length: 3    |
+| Slot 1 | "apple"      | ← full independent storage
+| Slot 2 | "banana"     |
+| Slot 3 | "apple"      | ← another full copy
++--------+--------------+
+
+---
+
+### 👾 4. Concurrency in Other Languages
+
+In concurrent or multithreaded environments (e.g., Java, C++), shared references to mutable data can lead to:
+
+    Race conditions (two threads modify same data at once),
+
+    Deadlocks, or
+
+    Hard-to-find bugs due to state mutation from "somewhere else".
+
+---
+
+### Best Practice Summary
+
+| Context                | Risk of Shared Reference     | Safer Alternative                       |
+| ---------------------- | ---------------------------- | --------------------------------------- |
+| Python lists/dicts     | Unintended mutation          | Use `.copy()` or `copy.deepcopy()`      |
+| Solidity storage       | Permanent global mutation    | Work with `memory` or `calldata`        |
+| Concurrency (Java/C++) | Race conditions / corruption | Locks, immutability, thread-safe design |
+
+---
+
+## GC stands for **Garbage Collection**.
+
+It’s a **memory management technique** used in many high-level programming languages (like Python, Java, JavaScript) to **automatically find and clean up** data in memory that is no longer needed.
+
+---
+
+### 🔧 How It Works (Simplified):
+
+When you create objects (like lists, strings, etc.), they take up memory (RAM).
+If you're no longer using those objects, the **garbage collector** (GC) finds them and frees that memory so it can be reused.
+
+---
+
+### 🧠 Example in Python:
+
+```python
+def make_list():
+    a = [1, 2, 3]
+    return "done"
+
+make_list()
+# The list [1, 2, 3] is no longer referenced → GC will delete it
+```
+
+You don’t need to manually delete `a` — Python's GC will handle it for you.
+
+---
+
+### 🚫 Solidity Has No GC
+
+Solidity (and EVM in general) does **not** have garbage collection because:
+
+* Smart contract data is stored **on-chain** in **permanent storage**.
+* Storage is **manually managed** — you explicitly set, update, or delete it.
+* Deleting a storage variable even **refunds gas**, because storage space is valuable.
+
+So in Solidity, *you* are responsible for removing data with statements like:
+
+```solidity
+delete myMapping[key];
+```
+
+---
+
+### ✅ Summary
+
+| Feature                 | High-level languages (Python, JS) | Solidity (EVM)           |
+| ----------------------- | --------------------------------- | ------------------------ |
+| Has Garbage Collection? | ✅ Yes                             | ❌ No                     |
+| Who manages memory?     | Runtime/GC system                 | You (the developer)      |
+| Cost of memory?         | 🧠 RAM, cleared automatically     | ⛓️ Persistent, costs gas |
+
+---
+
+## Public/External vs Private/Internal functions and variables.
+
+Let's clarify how **function visibility** and **state variable access** relate to each other in Solidity:
+
+---
+
+### ✅ **State variable access rules** are **based on scope**, not function visibility.
+
+* A `public` or `external` **function** **can access** `private` or `internal` **state variables** **as long as** the function is **within the same contract**.
+* The **caller (EOA)** does **not** directly access state variables — they **call functions**.
+* So **public functions *can* read or write private variables**, because the compiler checks where the function is defined, **not** who’s calling it.
+
+---
+
+### 📌 Example:
+
+```solidity
+contract Example {
+    uint private secret;
+
+    function setSecret(uint _value) public {
+        secret = _value; // ✅ allowed: function is in the same contract
+    }
+
+    function getSecret() public view returns (uint) {
+        return secret; // ✅ allowed: same scope
+    }
+}
+```
+
+Even though `secret` is `private`, `setSecret()` and `getSecret()` can access it — because they live **in the same contract**.
+
+---
+
+### 🔒 What does `private` actually mean for variables?
+
+* It means **only this contract** can access the variable.
+* Even **derived contracts (child contracts)** can't access it.
+* It's a **compile-time restriction**, not a runtime one.
+
+---
+
+### ⚠️ But if you want to prevent **EOA** (users) from triggering the function that changes sensitive state:
+
+* Make the function itself `internal` or `private`.
+* Or use access control modifiers like `onlyOwner`.
+
+---
+
+### ✅ TL;DR:
+
+> **You do not need to make a function private just because it accesses a private variable.**
+> What matters is **where the function is declared** — not its visibility.
+
+Great question — let's walk through this precisely.
+
+---
+
+### ✅ **When a state variable is marked `public` in Solidity:**
+
+Solidity **automatically generates a getter function** for that variable.
+
+So:
+
+```solidity
+uint public myVar;
+```
+
+Is **roughly equivalent to**:
+
+```solidity
+function myVar() public view returns (uint) {
+    return myVar;
+}
+```
+
+---
+
+### 🧍‍♂️ Can an **EOA (Externally Owned Account)** access `myVar`?
+
+Yes — **but only via the autogenerated getter**.
+They **cannot directly access storage**, but they **can call the getter function** and receive the current value.
+
+> 🧠 Think of it this way:
+> EOAs **cannot “reach into” storage**, but they **can call public functions** that expose parts of it.
+
+---
+
+### 🤖 Can another **contract** access `myVar`?
+
+Also yes — via the same **public getter**.
+
+If contract A declares:
+
+```solidity
+uint public balance;
+```
+
+Then contract B can do:
+
+```solidity
+uint otherBalance = AContractInstance.balance();
+```
+
+Again, this is just calling the autogenerated getter — **not directly reaching into raw storage**.
+
+---
+
+### 🔐 But can either of them **mutate** `balance`?
+
+Not directly. To **modify** a state variable, you must call a function (public/internal/etc.) that contains mutation logic:
+
+```solidity
+function setBalance(uint _val) public {
+    balance = _val;
+}
+```
+
+And again — you control who can call that function using `public`, `private`, `onlyOwner`, etc.
+
+---
+
+### ✅ TL;DR:
+
+| Actor             | Can **read** `public` variable? | Can **write** it?                   |
+| ----------------- | ------------------------------- | ----------------------------------- |
+| EOA               | ✅ (via getter)                  | ❌ (unless a setter function exists) |
+| External contract | ✅ (via getter)                  | ❌ (unless a setter function exists) |
+| Internal function | ✅ (directly)                    | ✅ (directly)                        |
+
+### ✅ When a state variable is marked public in Solidity:
+
+Solidity automatically generates a getter function for that variable.
+
+So:
+
+```solidity
+uint public myVar;
+```
+
+Is roughly equivalent to:
+
+```solidity
+function myVar() public view returns (uint) {
+    return myVar;
+}
+```
+
+---
+
+## 🔸 What immutables are used for:
+
+**Immutables** are typically used to store values that are known **only at the time of deployment** — often provided via the **constructor** — and **never change afterward**.
+
+### 🔹 So, where do these values come from?
+
+1. ✅ **Constructor arguments**:
+   The deployer sends these **as calldata** during deployment.
+
+   ```solidity
+   contract Example {
+       address immutable owner;
+
+       constructor(address _owner) {
+           owner = _owner; // set once
+       }
+   }
+   ```
+
+2. ✅ **Hardcoded by deployer**:
+   Sometimes the constructor may use logic (e.g., `msg.sender`, `block.timestamp`) instead of explicit parameters.
+
+   ```solidity
+   contract TimeLock {
+       uint256 immutable deployedAt;
+
+       constructor() {
+           deployedAt = block.timestamp;
+       }
+   }
+   ```
+
+---
+
+### 🔸 So to your question:
+
+> Are immutables used *only* for calldata which the deployer sends with the contract itself to the chain?
+
+**Not only**, but **mainly**. The most common usage is to store constructor arguments sent by the deployer. But they can also store **any value determinable during deployment**, even if not explicitly passed in as calldata.
+
+### TL;DR:
+
+* ✅ **Often set via constructor calldata**
+* ✅ **Can also be set using deployment-time context (`msg.sender`, `block.number`, etc.)**
+* 🚫 **Cannot be changed after deployment**
+* 🟩 **Efficient alternative to `storage` for "set-once" variables**
+
+---
+
+## ✅ When you import an interface in Solidity...
+
+You're telling the compiler:
+**"This is the structure (function signatures) of some contract that already exists at a known address."**
+Interfaces contain **no implementation**, just function declarations.
+
+---
+
+### ✅ You have two main ways to use an interface:
+
+#### 1. **Imperative (State Variable Style)**
+
+You *declare* the interface as a state variable and *initialize it immediately* with a contract address:
+
+```solidity
+IMyInterface public myContract = IMyInterface(0x123...abc);
+```
+
+* `IMyInterface`: the interface type
+* `0x123...abc`: the address of the deployed contract this interface refers to
+
+> 🧠 This way you're setting a fixed address once and for all (or for some context), and then you can reuse it through the contract.
+
+---
+
+#### 2. **Via a Function Call (Dynamic Style)**
+
+You can also use the interface inside a function, **without setting it ahead of time**:
+
+```solidity
+function interact(address someAddress) public {
+    IMyInterface temp = IMyInterface(someAddress);
+    temp.doSomething();
+}
+```
+
+* Here you're creating a *temporary pointer* to the external contract at runtime.
+* It’s dynamic and depends on the `someAddress` provided to the function.
+* You're not storing it — just using it on the fly.
+
+> 🧠 You **don’t need to provide an address beforehand**, because the address will be passed in at runtime when the function is called.
+
+---
+
+### 🔍 Why the difference?
+
+| Style              | When Address Needed | Stored? | Use Case            |
+| ------------------ | ------------------- | ------- | ------------------- |
+| **State variable** | Immediately         | Yes     | Static reference    |
+| **Function local** | At function call    | No      | Dynamic interaction |
+
+So in summary:
+
+> You must assign the interface to a contract address **before using it** — but *how and when* you assign it depends on whether you do it as a state variable (immediately) or inside a function (dynamically).
+
+---
+
+### Since IMyInterface is not a contract type with a constructor or internal logic — it's a reference-only abstraction.
+
+So when you’re telling the compiler:
+
+> "At this address, assume there's a contract implementing the functions defined in this interface."
+
+If you don’t provide an address at some point, the compiler can’t resolve what code you’re referencing.
+
+### ✅ Summary
+
+In Solidity, **you cannot instantiate a state variable of interface type without providing an address** — because interfaces are just **views** into existing deployed contracts. They don’t exist on their own; they don’t have code or storage.
+
+---
+
+### 🔴 So this **won’t compile**:
+
+```solidity
+IMyInterface public myContract;
+```
+
+Unless you initialize it later in the constructor or in a function:
+
+```solidity
+contract MyContract {
+    IMyInterface public myContract;
+
+    constructor(address _addr) {
+        myContract = IMyInterface(_addr);
+    }
+}
+```
+
+Or assign it in a function:
+
+```solidity
+function setAddress(address _addr) public {
+    myContract = IMyInterface(_addr);
+}
+```
+
+---
+
+### 🧠 Why?
+
+Because `IMyInterface` is **not a contract type** with a constructor or internal logic — it's a **reference-only abstraction**. You’re telling the compiler:
+
+> "At this address, assume there's a contract implementing the functions defined in this interface."
+
+So if you don’t provide an address at some point, the compiler can’t resolve what code you’re referencing.
+
+---
+
+### ✅ Summary
+
+| Attempt                                                      | Valid? | Reason                                              |
+| ------------------------------------------------------------ | ------ | --------------------------------------------------- |
+| `IMyInterface public x;`                                     | ❌      | No address = no reference = no contract to talk to  |
+| `IMyInterface public x = IMyInterface(addr);`                | ✅      | Address is given immediately                        |
+| `IMyInterface public x;` in contract + assign in constructor | ✅      | Delayed init, but address still provided eventually |
+
+---
+
+### Example:
+
+// Assume this is in a separate file or imported
+interface IToken {
+    function totalSupply() external view returns (uint256);
+}
+
+contract TokenReader {
+    IToken public token;
+
+    // Not a constructor — just a regular function
+    function setTokenAddress(address _token) public {
+        token = IToken(_token);
+    }
+
+    function getSupply() public view returns (uint256) {
+        return token.totalSupply(); // works only after `setTokenAddress()` is called
+    }
+}
+
+#### 🧠 Important Notes:
+
+- You’re still required to assign the address before calling any methods on the interface.
+
+- Until token is assigned, trying to call token.totalSupply() will revert (because token defaults to address(0)).
+
+- This gives flexibility to set or change the address at runtime instead of hardcoding it.
+
+---
+
+## SO FAR THE MOST IMPORTANT NOTE FOR ME, THE SUMMARY:
+
+- Public/internal state variables is about visibility and NOT mutability. Public here means automatically created getter for an EOA to resort to.
+- There's no setter however until a developer creates one him/herself! There's no template or standard, it's just the naming of a category of functions.
+- Public/External functions are those acessible for the EOA to call (for example with cast call).
+- Public/External functions can't take in the contract's storage variables as arguments.
+- However they can mutate them if these mutations are hardcoded into a function's body, cuz it's the developer's deliberate action! Even if Dangerous!
+- In such case the element to mutate was pre-determined, in case with passing storage variable as a functio argument - some arbitrary array in the storage can be changed unpredictebly!
+- Simple types of variables are fully copied by default when passed to a function, cuz it's assumed cheap. We're allowed to explicitly say we need to access the storage variable though, in such a case it will be reference type of variable from the storage.
+- Complex types are reference by default, however we can explicitly say we need a 'memory' copy for the function.
