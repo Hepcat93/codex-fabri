@@ -1530,3 +1530,117 @@ contract TokenReader {
 - In such case the element to mutate was pre-determined, in case with passing storage variable as a functio argument - some arbitrary array in the storage can be changed unpredictebly!
 - Simple variable types (e.g., `uint`, `bool`, `address`) are fully copied by default when passed to functions, as copying them is cheap. However, we can explicitly specify that we want to access the original storage variable using a `storage` reference (in internal functions).
 - Complex types (e.g., arrays, structs, mappings) are treated as reference types. When passed to functions, we must explicitly specify the data location—`memory` (a copy) or `storage` (a reference to the original data).
+
+---
+
+##EVEN FURTHER CLARIFICATION, OUTSIDE FUNCTIONS:
+
+### ✅ **Simple Types (like `uint`, `bool`)**
+
+* **Always fully copied** when assigned.
+* You can freely assign them to new variables anywhere — inside functions or between storage and memory — and it creates a full, independent copy.
+
+---
+
+### ✅ **Reference Types (arrays, structs, mappings)**
+
+#### 💠 Inside functions:
+
+* You must **explicitly** choose `memory` or `storage` when declaring variables of reference type inside functions.
+* `memory` creates a **copy** (temporary and isolated).
+* `storage` creates a **reference** to existing storage data.
+
+#### 💠 Outside functions (e.g., in contract scope):
+
+* You can **only** declare reference types in **storage** — that is, persistent state variables.
+* You **cannot** use `memory` outside of function bodies.
+
+---
+
+## 🧪 What happens when you copy an array in storage?
+
+Example:
+
+```solidity
+uint[] public original = [1, 2, 3];
+uint[] public copy;
+
+function cloneArray() public {
+    copy = original;
+}
+```
+
+In this case, **`copy = original;` creates a full, independent copy** of the array in **storage**. After this, modifying `copy[0]` will **not** affect `original[0]`.
+
+✅ So yes — **if you assign a storage array to another storage array, it is a full deep copy**.
+
+---
+
+### ⚠️ However:
+
+* If you assign a **storage pointer** to another variable using `=`, and both point to the same object, **modifying one will affect the other**.
+* To **avoid unintended reference**, avoid using `storage` references unless needed.
+
+Example of reference behavior:
+
+```solidity
+function dangerous() internal {
+    uint[] storage ref = original;
+    ref[0] = 42; // Modifies original!
+}
+```
+
+---
+
+### ✅ Summary:
+
+| Context                                   | Type                    | Copy Behavior           |
+| ----------------------------------------- | ----------------------- | ----------------------- |
+| Simple Types                              | Any                     | Full copy               |
+| Reference Types in Fn                     | `memory`                | Full copy               |
+| Reference Types in Fn                     | `storage`               | Reference (shared data) |
+| Storage → Storage                         | Assignment              | Full deep copy          |
+| `storage` → `storage` (via reference var) | `=` + `storage` keyword | Shared reference        |
+
+---
+
+### ChatGPT answers my question about `=` + `storage` keyword inside a function (shared reference):
+
+Exactly right.
+
+When you write:
+
+```solidity
+uint[] storage ref = original;
+```
+
+You're **not copying** `original` — you're creating a **new storage reference** (`ref`) that **points to the same data** in storage as `original`. So:
+
+* ✅ `ref` is not a new array.
+* ✅ It’s a **reference (alias)** to `original`.
+* ✅ Any change to `ref` affects `original`.
+
+### Contrast with this:
+
+```solidity
+copy = original;
+```
+
+This creates a **brand-new, independent storage array** called `copy`, and **copies the contents** of `original` into it. After this:
+
+* Changes to `copy` **don’t** affect `original`.
+* It’s a full **deep copy**, not a reference.
+
+---
+
+So, you're right — the presence of the `storage` keyword **within a function**, used like this:
+
+```solidity
+uint[] storage ref = original;
+```
+
+means: *“Make a reference to an existing storage array.”*
+
+This is different from assigning one storage array to another storage array variable directly (which triggers a full copy).
+
+
