@@ -1973,7 +1973,7 @@ uint[][] public dynamicNested;
 * When you declare a nested array in **storage**, it’s treated as a complex dynamic structure. Inner dynamic arrays also have their own storage locations (offsets via `keccak256`).
 * When using `memory`, you must **explicitly allocate** the inner arrays too.
 
-#### Example in `memory`: (has to be re-written)
+#### Example in `memory`:
 
 ```solidity
 function createMemoryArray() public pure returns (uint[][] memory) {
