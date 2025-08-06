@@ -1977,11 +1977,48 @@ uint[][] public dynamicNested;
 
 ```solidity
 function createMemoryArray() public pure returns (uint[][] memory) {
-    uint[][] arr;
-    arr[0][0] = 1 ;
-    arr[1][1] = 1 ;
+    // Initialize a memory array with 2 elements
+    uint[][] memory arr = new uint[][](2);
+    
+    // Initialize each sub-array
+    arr[0] = new uint[](2);  // Creates [0,0]
+    arr[1] = new uint[](2);  // Creates [0,0]
+    
+    // Now you can safely assign values
+    arr[0][0] = 1;
+    arr[1][1] = 1;
+    
     return arr;
 }
+```
+
+This will return:
+```
+[
+    [1, 0],
+    [0, 1]
+]
+```
+
+##### **Key Takeaway**
+- **Storage arrays**: Can be declared without size (but must be initialized later).
+- **Memory arrays**: **Must** have a defined size at declaration.
+
+---
+
+##### **Correct Ways to Declare Memory Arrays**
+###### **Option 1: Fixed Size**
+```solidity
+uint[2][2] memory arr; // 2x2 fixed-size array (all elements start at 0)
+arr[0][0] = 1;        // ✅ Works
+```
+
+###### **Option 2: Dynamic Outer, Fixed Inner**
+```solidity
+uint[][] memory arr = new uint[][](2); // Outer array size = 2
+arr[0] = new uint[](2); // Inner array size = 2
+arr[1] = new uint[](2);
+arr[0][0] = 1; // ✅ Works
 ```
 
 ---
