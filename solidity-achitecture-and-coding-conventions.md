@@ -2288,6 +2288,100 @@ If Ether is being sent **and** there is a `receive()` function, Solidity will **
 
 ---
 
+## **Brief comparison** between `send()` and `transfer()` in Solidity:
+
+| Feature        | `transfer()`                          | `send()`                                 |
+| -------------- | ------------------------------------- | ---------------------------------------- |
+| Gas limit      | Forwards **2300 gas**                 | Forwards **2300 gas**                    |
+| Error handling | **Reverts** on failure                | **Returns `false`** on failure           |
+| Syntax         | `recipient.transfer(amount)`          | `bool sent = recipient.send(amount)`     |
+| Usage          | Safer (auto-revert)                   | Riskier (requires manual check + revert) |
+| Recommended?   | Deprecated in favor of `call{value:}` | Deprecated in favor of `call{value:}`    |
+
+### Summary:
+
+* `transfer()` is safer (throws if transfer fails).
+* `send()` is riskier (returns false, needs explicit check).
+* **Both are now discouraged** — `call{value: x}("")` is the modern standard.
+
+---
+
+### 🧨 What is "throw"?
+
+In this context, **"throw"** means the function **reverts** the transaction automatically if something goes wrong.
+
+* With `transfer()`, if the ETH transfer fails (e.g., recipient is a contract and the fallback runs out of gas), the whole transaction **automatically reverts** (gets canceled).
+* This is **safe**, because the developer doesn’t need to remember to check for success — Solidity does it for you.
+
+```solidity
+recipient.transfer(1 ether); // Auto-reverts on failure (safe)
+```
+
+---
+
+### ✅ What is "explicit check"?
+
+With `send()`, **you must check manually** if the ETH was sent successfully.
+
+* If the send fails, it just returns `false`.
+* If you **don’t check** this return value and handle the failure, your contract could continue in a broken state (security risk).
+
+```solidity
+bool success = recipient.send(1 ether);
+require(success, "Send failed"); // Explicit check required
+```
+
+---
+
+### ✅ Why `call` is better
+
+`call{value: x}` is now preferred because:
+
+* It **returns two values**: `(bool success, bytes memory data)`
+* It **allows forwarding all remaining gas** (not limited to 2300)
+* It supports calling functions and sending ETH at the same time
+* It is **flexible** and **future-proof**, but also **riskier if misused**
+
+```solidity
+(bool success, ) = recipient.call{value: 1 ether}("");
+require(success, "Call failed");
+```
+
+> **Important**: `call` gives you power — but with great power comes great responsibility. You must handle errors carefully to avoid vulnerabilities.
+
+---
+
+### TL;DR
+
+| Method     | Auto-Revert | Manual Check | Gas Forwarded | Status        |
+| ---------- | ----------- | ------------ | ------------- | ------------- |
+| `transfer` | ✅ Yes       | ❌ No         | 2300 gas      | Deprecated    |
+| `send`     | ❌ No        | ✅ Required   | 2300 gas      | Deprecated    |
+| `call`     | ❌ No        | ✅ Required   | All gas       | Recommended ✅ |
+
+---
+
+### The functions `transfer()`, `send()`, and `call()` are **Solidity built-in functions**
+
+🔹 Here's what they are:
+
+| Function     | Type                        | Used for                                 |
+| ------------ | --------------------------- | ---------------------------------------- |
+| `transfer()` | Solidity built-in           | Sends ETH safely with auto-revert        |
+| `send()`     | Solidity built-in           | Sends ETH with manual check              |
+| `call()`     | Solidity low-level built-in | Generic call to any contract or send ETH |
+
+They are all part of Solidity's **address type**, and you can use them like this:
+
+```solidity
+address(recipient).transfer(1 ether);      // Built-in
+address(recipient).send(1 ether);          // Built-in
+address(recipient).call{value: 1 ether}(""); // Built-in
+```
+
+---
+
+
 
 
 
