@@ -359,7 +359,4 @@ No — but it must be:
 
 ---
 
-### For further nuisanses on delegatecall and it's comparison with interfaces, please proceed to the [solidity-architecture-and-coding-conventions.md](https://github.com/Hepcat93/codex-fabri/blob/main/solidity-achitecture-and-coding-conventions.md#whats-the-difference-between-delegatecall-and-interface) file :)
-
-
-
+### For further nuances on delegatecall and it's comparison with interfaces, please proceed to the [respective section](https://github.com/Hepcat93/codex-fabri/blob/main/solidity-achitecture-and-coding-conventions.md#whats-the-difference-between-delegatecall-and-interface) of the solidity-architecture-and-coding-conventions.md file :)
