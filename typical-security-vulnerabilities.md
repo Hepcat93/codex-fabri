@@ -360,3 +360,19 @@ No — but it must be:
 ---
 
 ### For further nuances on delegatecall and it's comparison with interfaces, please proceed to the [respective section](https://github.com/Hepcat93/codex-fabri/blob/main/solidity-achitecture-and-coding-conventions.md#whats-the-difference-between-delegatecall-and-interface) of the solidity-architecture-and-coding-conventions.md file :)
+
+---
+
+## My future learning path from here now on:
+
+**📘 What to Learn:**
+Focus on understanding common smart contract vulnerabilities: reentrancy, integer overflows/underflows (if Solidity <0.8.x), flash loan exploits, price oracle manipulation, front-running/MEV, unchecked external calls, access control failures, and logic bugs (e.g., incorrect operation order).
+
+**📚 Resources:**
+DeFi Exploits Wiki, Secureum Learn, and the Rareskills auditing course (paid but very strong).
+
+**🛠 Practice:**
+Read hack analyses on [rekt.news](https://rekt.news), recreate exploits on a local network, and write at least one intentionally vulnerable smart contract, then “break” it yourself.
+
+---
+
