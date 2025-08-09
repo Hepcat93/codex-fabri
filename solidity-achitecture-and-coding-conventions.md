@@ -1537,7 +1537,7 @@ contract TokenReader {
 
 ---
 
-##EVEN FURTHER CLARIFICATION, OUTSIDE FUNCTIONS:
+## EVEN FURTHER CLARIFICATION, OUTSIDE FUNCTIONS:
 
 ### ✅ **Simple Types (like `uint`, `bool`)**
 
