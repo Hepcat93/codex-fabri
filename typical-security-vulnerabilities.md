@@ -366,10 +366,19 @@ No — but it must be:
 ## My future learning path from here now on:
 
 **📘 What to Learn:**
-Focus on understanding common smart contract vulnerabilities: reentrancy, integer overflows/underflows (if Solidity <0.8.x), flash loan exploits, price oracle manipulation, front-running/MEV, unchecked external calls, access control failures, and logic bugs (e.g., incorrect operation order).
+Focus on understanding common smart contract vulnerabilities:
+
+- reentrancy,
+- integer overflows/underflows (if Solidity <0.8.x),
+- flash loan exploits, price oracle manipulation,
+- front-running/MEV,
+- unchecked external calls,
+- access control failures, and logic bugs (e.g., incorrect operation order).
 
 **📚 Resources:**
-DeFi Exploits Wiki, Secureum Learn, and the Rareskills auditing course (paid but very strong).
+- DeFi Exploits Wiki,
+- Secureum Learn,
+- the Rareskills auditing course (paid but very strong).
 
 **🛠 Practice:**
 Read hack analyses on [rekt.news](https://rekt.news), recreate exploits on a local network, and write at least one intentionally vulnerable smart contract, then “break” it yourself.
