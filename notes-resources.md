@@ -34,3 +34,8 @@ This file contains resources I have selected for studying smart contract auditin
 ## 🌀 How a ZKVM Works
 
 * [ZKVM Explanation by RareSkills](https://rareskills.io/post/zkvm)
+
+---
+
+## Zombie dApps
+* [Zombie dApps: Abandoned Web3 Sites Revived as Wallet Drainers](https://www.coinspect.com/blog/zombie-dapps/)
