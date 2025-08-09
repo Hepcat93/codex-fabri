@@ -4,6 +4,11 @@ This file contains resources I have selected for studying smart contract auditin
 
 ---
 
+## Wallet security rankings
+[Wallet security rankings](https://www.coinspect.com/wallets?utm_source=cyfrin&utm_medium=display&utm_campaign=wsr)
+
+---
+
 ## 🧠 Core Articles
 
 > Recommended reading for understanding the mindset and approaches in auditing
