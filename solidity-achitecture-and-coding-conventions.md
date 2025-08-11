@@ -2473,7 +2473,80 @@ address(recipient).call{value: 1 ether}(""); // Built-in
 
 ---
 
+## Cases where shadowing (using same name for different things) causes hidden bugs when copying arrays. That’s actually a common Solidity pitfall
 
+Alright — here’s a **real-world bug scenario** with arrays and variable shadowing in Solidity.
+
+---
+
+### Example:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract ArrayShadowBug {
+    uint[] public arr = [1, 2, 3];
+
+    function replaceArray(uint[] memory arr) public {
+        // Looks like we're replacing the state array, but...
+        arr[0] = 999; // modifies the *parameter*, not the state variable!
+    }
+
+    function getArray() public view returns (uint[] memory) {
+        return arr;
+    }
+}
+```
+
+---
+
+### How to Fix:
+
+```solidity
+// Option 1: Rename the parameter (recommended)
+function replaceArray(uint[] memory newArr) public {
+    arr = newArr; // explicitly assign to the state variable
+}
+
+// Option 2: Properly reference the state variable (less readable)
+function replaceArray(uint[] memory arr) public {
+    // Correct way to access the state variable when shadowed:
+    arr = arr; // This still doesn't work! See proper solution below
+    // Actually, you can't do this - you MUST rename the parameter
+}
+```
+
+The key realization is that **in Solidity, when a parameter shadows a state variable, there's no way to directly access the state variable within that function**. The only clean solution is to rename the parameter.
+
+### Proper Solution:
+
+```solidity
+function replaceArray(uint[] memory newArray) public {
+    arr = newArray; // clear and unambiguous
+}
+```
+
+---
+
+### Dangerous Twist (Storage Reference + Shadowing):
+Here's that dangerous case I mentioned where shadowing can cause unexpected storage modifications:
+
+```solidity
+contract ShadowDanger {
+    uint[] public arr = [1, 2, 3];
+    
+    function dangerousReplace(uint[] storage arr) internal {
+        arr[0] = 999; // This DOES modify state!
+    }
+    
+    function triggerBug() public {
+        dangerousReplace(arr); // Passes storage reference
+    }
+}
+```
+
+In this case, because we're using a `storage` reference parameter (even though it's shadowing), it actually modifies the state variable. This is why shadowing can be particularly dangerous in Solidity.
 
 
 
