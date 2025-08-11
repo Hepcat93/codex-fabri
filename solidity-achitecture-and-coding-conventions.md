@@ -2548,5 +2548,88 @@ contract ShadowDanger {
 
 In this case, because we're using a `storage` reference parameter (even though it's shadowing), it actually modifies the state variable. This is why shadowing can be particularly dangerous in Solidity.
 
+---
 
+## Function Parameter vs Function Variable vs Function Argument
+---
 
+### 1. **Function Parameter**
+
+* **What it is:**
+  A *placeholder* defined in a function’s parentheses.
+  It gets its value **only when** the function is called.
+
+* **Lifetime:**
+  Exists **only inside** that function call.
+  Disappears when the function finishes.
+
+* **Example:**
+
+```solidity
+function setValue(uint x) public {
+    // here `x` is a parameter
+}
+```
+
+* **Analog words:**
+
+  * *argument placeholder*
+  * *formal argument* (formal parameter)
+
+---
+
+### 2. **Function Variable** (also called *local variable*)
+
+* **What it is:**
+  A variable declared **inside** the function body (not in the parameter list).
+  Used to store temporary values during that function execution.
+
+* **Lifetime:**
+  Exists only while the function runs.
+  Disappears after the function finishes.
+
+* **Example:**
+
+```solidity
+function double(uint num) public pure returns (uint) {
+    uint result = num * 2; // `result` is a local variable
+    return result;
+}
+```
+
+* **Analog words:**
+
+  * *local variable*
+  * *temporary variable*
+  * *stack variable* (for value types)
+
+---
+
+### 3. **Function Argument**
+
+* **What it is:**
+  The *actual value* you pass to a function when you call it.
+  It gets assigned to the function’s parameter.
+
+* **Example:**
+
+```solidity
+setValue(42); // here `42` is the argument
+```
+
+* **Analog words:**
+
+  * *actual argument*
+  * *input value*
+
+---
+
+### Quick Analogy:
+
+Imagine a delivery service:
+
+* **Function parameter** = the “box label” saying what to expect (e.g., `uint x` — “this will be a number”).
+* **Function argument** = the actual package contents delivered (e.g., `42`).
+* **Function variable** = something you unpack and temporarily store on the kitchen counter while you use it.
+
+---
