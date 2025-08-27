@@ -2657,8 +2657,23 @@ Imagine a delivery service:
 
 ---
 
-## Complex Contract Ownership Structure Though a Contract's Test and Deployment Scripts:
+## Complex Contract Ownership Structure Though a Contract's Test and Deploy Scripts:
 
-Within my set of contracts I have the FundMe contract, the deploy script (also a contract) and the test script (=contract). Normally the owner is the instance which deployed the selected contract we're discussing. For insatnce, let it be the FundMe contract. In case it's me who deployed it with 'forge create', an EOA, then this EOA is the owner. In case it's the testing contract, which deployed the FundMe contract - then it is the owner, it is the 'msg.sender'. If it's the testing contract which triggered the deploymenet script - the owner is still the deployment script. But in this scenario we have local testing without actual deployment (Forge quickly starts and kills an EVM for this sole purpose). It's different from the situation when we run anvil, in this case it's a full fledged 'external' deployemnt.
+Within my set of contracts I have the FundMe contract, the deploy script (also a contract) and the test script (=contract). Normally the owner is the instance which deployed the selected contract we're discussing. For insatnce, let it be the FundMe contract. In case it's me who deployed it with 'forge create', an EOA, then this EOA is the owner. In case it's the testing contract, which deployed the FundMe contract - then it is the owner, it is the 'msg.sender'. If it's the testing contract which triggered the deploy script - the owner is still the deploy script. But in this scenario we have local testing without actual deploy (Forge quickly starts and kills an EVM for this sole purpose). It's different from the situation when we run anvil, in this case it's a full fledged 'external' deployemnt.
 
-But in case the Deployment script uses `vm.startBroadcast()` - then the 'msg.sender' a.k.a. the owner is not this script, but the EOA/contract which triggered this deployment script. So if I started the deployment script - then I'm the owner of the freshly deployed contract. If the test contract triggered the deployment script with `vm.startBroadcast()` then this test contract becomes the owner.
+But in case the deploy script uses `vm.startBroadcast()` - then the 'msg.sender' a.k.a. the owner is not this script, but the EOA/contract which triggered this deploy script. So if I started the deploy script - then I'm the owner of the freshly deployed contract. If the test contract triggered the deploy script with `vm.startBroadcast()` then this test contract becomes the owner.
+
+At least that's what I initially thought, but the real mechanism appears to be a little more complex.
+
+### 👉 The deploy script itself never becomes the owner once broadcast is active.
+
+Deploy script with vm.startBroadcast(addr) → addr (EOA or specified address) is owner.
+
+If it's vm.startBroadcast() with no addr, then then the owner = **the default broadcast address** (Forge picks `msg.sender` as your first private key in `foundry.toml` / CLI, usually `vm.envUint("PRIVATE_KEY")`).
+
+So:
+
+* `vm.startBroadcast()` → deployer is the default EOA from config, **not the script contract**.
+
+And if it happens inside a test, Forge spins up its own ephemeral EVM with its own seeded accounts (from `foundry.toml` or defaults).
+So if your deploy script calls `vm.startBroadcast()` inside a test, the **default test EOA** (not the test contract) becomes the deployer/owner.
