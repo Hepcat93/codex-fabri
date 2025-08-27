@@ -2659,43 +2659,6 @@ Imagine a delivery service:
 
 ## Complex Contract Ownership Structure Though a Contract's Test and Deployment Scripts:
 
-### Deep Copying Storage Arrays in Solidity
+Within my set of contracts I have the FundMe contract, the deploy script (also a contract) and the test script (=contract). Normally the owner is the instance which deployed the selected contract we're discussing. For insatnce, let it be the FundMe contract. In case it's me who deployed it with 'forge create', an EOA, then this EOA is the owner. In case it's the testing contract, which deployed the FundMe contract - then it is the owner, it is the 'msg.sender'. If it's the testing contract which triggered the deploymenet script - the owner is still the deployment script. But in this scenario we have local testing without actual deployment (Forge quickly starts and kills an EVM for this sole purpose). It's different from the situation when we run anvil, in this case it's a full fledged 'external' deployemnt.
 
-In Solidity, assigning one storage array to another (`a = b`) will only copy the *reference*, not the actual data. If you need a true **deep copy** (e.g., when duplicating arrays or nested structures), you cannot do it directly. A common trick is to serialize the source array with `abi.encode` and then decode it back into a fresh `memory` array, which can be written into a new storage array. For example:
-
-```solidity
-uint256[] memory tmp = abi.decode(abi.encode(source), (uint256[]));
-for (uint i = 0; i < tmp.length; i++) {
-    destination.push(tmp[i]);
-}
-````
-
-This ensures that the `destination` array becomes a full, independent copy of the `source`, rather than just another pointer to the same storage.
-
-#### Copying Arrays of Structs
-
-The same principle applies to arrays of structs. For instance:
-
-```solidity
-struct Person {
-    string name;
-    uint256 age;
-}
-
-Person[] storage people;
-Person[] storage backup;
-
-// Create a full deep copy
-Person[] memory tmp = abi.decode(abi.encode(people), (Person[]));
-for (uint i = 0; i < tmp.length; i++) {
-    backup.push(tmp[i]);
-}
-```
-
-Here, every `Person` in `people` is fully copied into `backup`, including all string data and numbers. This way, modifying one array won’t affect the other.
-
-```
-
-Would you like me to also add a **short warning** about gas costs (since deep copying big arrays in storage can get very expensive)?
-```
-
+But in case the Deployment script uses `vm.startBroadcast()` - then the 'msg.sender' a.k.a. the owner is not this script, but the EOA/contract which triggered this deployment script. So if I started the deployment script - then I'm the owner of the freshly deployed contract. If the test contract triggered the deployment script with `vm.startBroadcast()` then this test contract becomes the owner.
