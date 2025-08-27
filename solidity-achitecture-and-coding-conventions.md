@@ -924,6 +924,16 @@ storage → storage or memory → memory — brings pointer copy.
 ##### ⚠️ Exception:
 fixed-size arrays (uint[5] and so on) previously could be copied only element by element, but starting from the version ^0.6.0 the compiler can perform this automatically. But for dynamic arrays it's always deep copy.
 
+---
+
+##### You need abi.encode for dynamic arrays of structs or nested data
+
+Solidity doesn’t let you directly assign storage → memory for dynamic arrays of structs (or nested data). abi.encode packs the whole storage array into bytes, and abi.decode reconstructs it cleanly in memory — giving you a true copy instead of just a reference.
+
+For simple dynamic arrays of primitive types (uint256[], address[]), you could skip it and copy element-by-element, but for structs abi.encode/decode is the neat workaround.
+
+---
+
 #### Mappings
 
 * Mappings cannot be passed as `memory` or `calldata`. Solidity **only supports `storage`** for mappings.
@@ -2646,3 +2656,46 @@ Imagine a delivery service:
 * **Function variable** = something you unpack and temporarily store on the kitchen counter while you use it.
 
 ---
+
+## Complex Contract Ownership Structure Though a Contract's Test and Deployment Scripts:
+
+### Deep Copying Storage Arrays in Solidity
+
+In Solidity, assigning one storage array to another (`a = b`) will only copy the *reference*, not the actual data. If you need a true **deep copy** (e.g., when duplicating arrays or nested structures), you cannot do it directly. A common trick is to serialize the source array with `abi.encode` and then decode it back into a fresh `memory` array, which can be written into a new storage array. For example:
+
+```solidity
+uint256[] memory tmp = abi.decode(abi.encode(source), (uint256[]));
+for (uint i = 0; i < tmp.length; i++) {
+    destination.push(tmp[i]);
+}
+````
+
+This ensures that the `destination` array becomes a full, independent copy of the `source`, rather than just another pointer to the same storage.
+
+#### Copying Arrays of Structs
+
+The same principle applies to arrays of structs. For instance:
+
+```solidity
+struct Person {
+    string name;
+    uint256 age;
+}
+
+Person[] storage people;
+Person[] storage backup;
+
+// Create a full deep copy
+Person[] memory tmp = abi.decode(abi.encode(people), (Person[]));
+for (uint i = 0; i < tmp.length; i++) {
+    backup.push(tmp[i]);
+}
+```
+
+Here, every `Person` in `people` is fully copied into `backup`, including all string data and numbers. This way, modifying one array won’t affect the other.
+
+```
+
+Would you like me to also add a **short warning** about gas costs (since deep copying big arrays in storage can get very expensive)?
+```
+
