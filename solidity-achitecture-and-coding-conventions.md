@@ -911,6 +911,19 @@ In Solidity, when a user (EOA or another contract) interacts with a public funct
 * This copy is **isolated**: changes won’t affect the original.
 * In contrast, if you use an internal function and explicitly use `storage`, the original will be mutated.
 
+---
+
+While copying dynamic arrays:
+
+storage → memory always returns deep (independent) copy.
+
+memory → storage also brings deep copy.
+
+storage → storage or memory → memory — brings pointer copy.
+
+##### ⚠️ Exception:
+fixed-size arrays (uint[5] and so on) previously could be copied only element by element, but starting from the version ^0.6.0 the compiler can perform this automatically. But for dynamic arrays it's always deep copy.
+
 #### Mappings
 
 * Mappings cannot be passed as `memory` or `calldata`. Solidity **only supports `storage`** for mappings.
