@@ -286,7 +286,13 @@ Result: **the proxy works for the attacker** now.
 
 ---
 
-You're referring to the `delegatecall` command — a low-level EVM instruction that’s **very powerful** but also **very dangerous** if used incorrectly.
+## 📝 What EIP-6780 (was proposed in March 2023) does:
+
+* After the upgrade, if you call SELFDESTRUCT in a transaction that is not the same transaction in which the contract was created, then the contract’s code, storage, and the account itself will not be deleted. Only its Ether balance is transferred out. 
+Ethereum Improvement Proposals
+
+* The old behavior (full destruction) remains only when SELFDESTRUCT is in the same transaction that deployed the contract. 
+Ethereum Improvement Proposals
 
 ---
 
