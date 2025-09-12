@@ -286,7 +286,7 @@ Result: **the proxy works for the attacker** now.
 
 ---
 
-## 📝 What EIP-6780 (was proposed in March 2023) does:
+## 📝 What EIP-6780 (was proposed in March 2023) does for proxies:
 
 * After the upgrade, if you call SELFDESTRUCT in a transaction that is not the same transaction in which the contract was created, then the contract’s code, storage, and the account itself will not be deleted. Only its Ether balance is transferred out. 
 Ethereum Improvement Proposals
