@@ -44,3 +44,12 @@ This file contains resources I have selected for studying smart contract auditin
 
 ## Zombie dApps
 * [Zombie dApps: Abandoned Web3 Sites Revived as Wallet Drainers](https://www.coinspect.com/blog/zombie-dapps/)
+
+---
+
+## **📚Vulnerability Resources:**
+- DeFi Exploits Wiki,
+- Secureum Learn,
+- the Rareskills auditing course (paid but very strong),
+- hack analyses on [rekt.news](https://rekt.news), recreate exploits on a local network, and write at least one intentionally vulnerable smart contract, then “break” it yourself.
+
