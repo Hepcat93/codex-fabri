@@ -183,3 +183,77 @@ cast sig "version()"
 * Selector = `keccak256("signature")[:4]`
 * It tells the EVM which function to call
 * `vm.mockCall` uses it to simulate return values
+
+---
+
+## 🧩 `forge fmt`
+
+**Purpose:** formats Solidity code according to standard style rules.
+**Analogy:** similar to `prettier` or `rustfmt` in other languages.
+
+**Example:**
+
+```bash
+forge fmt
+```
+
+**What it does:**
+
+* Automatically aligns indentation, spaces, and line breaks.
+* Normalizes syntax for a consistent code style (handy before committing).
+* By default, formats all `.sol` files in the project.
+* You can also format specific files:
+
+  ```bash
+  forge fmt src/Contract.sol
+  ```
+
+**Configuration:**
+Formatting is configured in the `foundry.toml` file, under the `[fmt]` section.
+Example:
+
+```toml
+[fmt]
+line_length = 100
+tab_width = 4
+bracket_spacing = true
+```
+
+---
+
+## 🧮 `forge snapshot`
+
+**Purpose:** creates a **snapshot** of gas usage for all tests.
+
+**Example:**
+
+```bash
+forge snapshot
+```
+
+**What it does:**
+
+* Runs all tests (`forge test`) and records the average gas cost of each test.
+* Saves the results to a `.gas-snapshot` file in the project root.
+
+Example contents:
+
+```
+testDeposit() (gas: 51234)
+testWithdraw() (gas: 48210)
+```
+
+**Why it’s useful:**
+
+* To track gas consumption changes between commits.
+* Very convenient in CI/CD pipelines — helps detect performance regressions.
+
+**Compare with the previous snapshot:**
+
+```bash
+forge snapshot --diff
+```
+
+shows which tests have become more expensive in terms of gas.
+
+---
