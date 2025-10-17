@@ -257,3 +257,29 @@ forge snapshot --diff
 shows which tests have become more expensive in terms of gas.
 
 ---
+
+## Here’s a **compact and convenient table** for working with `forge test` during development and audits:
+
+| Command / Flag                                 | What it does                                  | When to use it                                   |
+| ---------------------------------------------- | --------------------------------------------- | ------------------------------------------------ |
+| `forge test`                                   | Runs **all tests** in the `test/` folder      | Quick run of the full test suite                 |
+| `forge test --match-contract ContractName`     | Runs tests for **a specific contract only**   | When you want to focus on one contract           |
+| `forge test --match-path test/FileName.t.sol`  | Runs tests **from a specific test file only** | When you have many files and need just one       |
+| `forge test --match-test testFunctionName`     | Runs **a single test function**               | For quick checking of a single scenario          |
+| `forge test --match-contract X --match-test Y` | Combines both contract and test filtering     | To run a specific test in a specific contract    |
+| `forge coverage`                               | Displays **code coverage (%)**                | To verify how complete your test coverage is     |
+| `forge coverage --match-contract ContractName` | Shows coverage **for one specific contract**  | Useful for focused analysis                      |
+| `-vvvv`                                        | Enables **very detailed logs**                | For debugging complex cases, reverts, cheatcodes |
+| `--gas-report`                                 | Displays **gas usage per test**               | For gas optimization and identifying heavy ops   |
+| `--fork-url <RPC>`                             | Runs tests on a **mainnet/testnet fork**      | To test real-world integrations, e.g. DeFi       |
+| Fuzzing (parameterized tests)                  | Foundry automatically feeds random values     | For checking invariants and robustness of logic  |
+
+---
+
+💡 **Audit Tip:**
+
+* To test **one contract only** → use `--match-contract` + `--match-test`.
+* To analyze **code coverage** → use `forge coverage`.
+* For **stress and invariant testing** → combine fuzzing with cheatcodes.
+
+---
