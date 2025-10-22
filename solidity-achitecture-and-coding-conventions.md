@@ -2464,6 +2464,11 @@ require(success, "Call failed");
 
 > **Important**: `call` gives you power — but with great power comes great responsibility. You must handle errors carefully to avoid vulnerabilities.
 
+🔒 One can limit forwarded gas manually, when uses 'call':
+```solidity
+(bool success, ) = recipient.call{value: amount, gas: 2300}("");
+```
+
 ---
 
 ### TL;DR
